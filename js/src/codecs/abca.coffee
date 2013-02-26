@@ -34,10 +34,6 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
             return true
           else
             throw new NotSupportedNodeTypeException('0x'+result.toString(16))
-      when ReplayTypeCodes.BOOL_TRUE
-        return true
-      when ReplayTypeCodes.BOOL_FALSE
-        return false
       when ReplayTypeCodes.INT8
         return @reader.readInt8()
       when ReplayTypeCodes.INT16
@@ -76,6 +72,14 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
         return @reader.readUint16()
       when ReplayTypeCodes.INVALID
         return null
+      else
+        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
+  readOptimizedValueNode: (typeCode)->
+    switch typeCode
+      when ReplayTypeCodes.BOOL_TRUE
+        return true
+      when ReplayTypeCodes.BOOL_FALSE
+        return false
       when ReplayTypeCodes.INT32_ZERO
         return 0
       when ReplayTypeCodes.INT32_BYTE
@@ -98,6 +102,7 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
         return 0.0
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
+
   readArrayNode: (typeCode)->
     arrayNodeEndOffset = @reader.readUintVar()
     results = []
@@ -199,6 +204,11 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
           if @reader.getPosition() >= arrayNodeEndOffset then break
           results.push(@reader.readUint16())
         return results
+      else
+        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
+  readOptimizedArrayNode: (typeCode)->
+    results = []
+    switch typeCode
       when ReplayTypeCodes.INT32_BYTE_ARRAY
         while true
           if @reader.getPosition() >= arrayNodeEndOffset then break
@@ -287,6 +297,36 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
     obj[tagName] = values
     return obj
 
+  ###
+
+  ###
+  decodeNode: (typeCode)->
+    ReplayDataReader.checkReaderType(@reader, 'decodeNode()')
+    if isNumber(typeCode) == false then throw new TypeError('This typeCode is not Number')
+    recordBit = typeCode & ReplayTypeCodes.RECORD
+    #if recordBit == 0 || @reader.getPosition()-1 == @header.nodesStartOffset
+
+    if typeCode < ReplayTypeCodes.BOOL_TRUE
+      v = @readValueNode(typeCode)
+      _g(['--VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+    else if typeCode < ReplayTypeCodes.BOOL_ARRAY
+      v = @readOptimizedValueNode(typeCode)
+      _g(['--OPTIMIZED_VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+    else if typeCode < ReplayTypeCodes.BOOL_TRUE_ARRAY
+      v = @readArrayNode(typeCode)
+      _g(['--ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+    else if typeCode < ReplayTypeCodes.RECORD
+      v = @readOptimizedArrayNode(typeCode)
+      _g(['--OPTIMIZED_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+    else if typeCode == ReplayTypeCodes.RECORD
+      v = @readRecordNode()
+      _g(['--RECORD_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+    else if typeCode == ReplayTypeCodes.RECORD_ARRAY
+      v = @readRecordArrayNode()
+      _g(['--RECORD_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+    else
+      throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
+    return v
   parseGameTitle: (gameTitle)->
     result = gameTitle.match(/^([a-z|A-Z|\d]*)\:TotalWar\(([0-9|\.]*)\)\(.*Build\(([0-9]*)\).*\)\sChangelist\(([0-9]*)\)$/)
     return new ReplayDataGameTitle(result[1], result[2], Number(result[3]), Number(result[4]))
