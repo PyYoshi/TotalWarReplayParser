@@ -1,29 +1,42 @@
 ## ロガー
 _l = (msg)->
-  if DEBUG == true then console.log(msg)
+  if DEBUG == true
+    if (typeof window.console.log == 'undefined')
+      window.console.info(msg)
+    else
+      window.console.log(msg)
   return
 
 _i = (msg)->
-  if DEBUG == true then console.info(msg)
+  if DEBUG == true then window.console.info(msg)
   return
 
 _d = (msg)->
-  if DEBUG == true then console.debug(msg)
+  if DEBUG == true
+    if (typeof window.console.debug == 'undefined')
+      window.console.info(msg)
+    else
+      window.console.debug(msg)
   return
 
 _w = (msg)->
-  if DEBUG == true then console.warn(msg)
+  if DEBUG == true then window.console.warn(msg)
   return
 
 _e = (msg)->
-  if DEBUG == true then console.error(msg)
+  if DEBUG == true then window.console.error(msg)
   return
 
 _g = (msgs=[], logMethod=_l)->
   if DEBUG == true
-    console.group()
-    logMethod(msg) for msg in msgs
-    console.groupEnd()
+    if (typeof window.console.group == 'undefined')
+      logMethod('-- Start Group Log --')
+      logMethod('\t'+msg) for msg in msgs
+      logMethod('--- End Group Log ---')
+    else
+      window.console.group()
+      logMethod(msg) for msg in msgs
+      window.console.groupEnd()
   return
 
 # @see http://www.discoded.com/2012/04/05/my-favorite-javascript-string-extensions-in-coffeescript/
