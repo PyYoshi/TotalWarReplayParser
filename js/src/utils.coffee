@@ -69,21 +69,21 @@ if (typeof String::trim != 'function')
 
 ###
 isArguments = (obj)->
-  return toString.call(obj) == '[object Arguments]'
+  return Object.prototype.toString.call(obj) == '[object Arguments]'
 isFunction = (obj)->
-  return toString.call(obj) == '[object Function]'
+  return Object.prototype.toString.call(obj) == '[object Function]'
 isString = (obj)->
-  return toString.call(obj) == '[object String]'
+  return Object.prototype.toString.call(obj) == '[object String]'
 isNumber = (obj)->
-  return toString.call(obj) == '[object Number]'
+  return Object.prototype.toString.call(obj) == '[object Number]'
 isDate = (obj)->
-  return toString.call(obj) == '[object Date]'
+  return Object.prototype.toString.call(obj) == '[object Date]'
 isRegExp = (obj)->
-  return toString.call(obj) == '[object RegExp]'
+  return Object.prototype.toString.call(obj) == '[object RegExp]'
 isObject = (obj)->
   return obj == Object(obj)
 isArray = Array.isArray || (obj)->
-  return toString.call(obj) == '[object Array]'
+  return Object.prototype.toString.call(obj) == '[object Array]'
 isElement = (obj)->
   return !!(obj && obj.nodeType == 1)
 
