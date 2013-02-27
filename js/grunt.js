@@ -20,8 +20,8 @@ module.exports = function (grunt) {
                         'src/models.coffee',
                         'src/reader.coffee',
                         'src/codecs/core.coffee',
-                        'src/codecs/abcd.coffee',
                         'src/codecs/abce.coffee',
+                        'src/codecs/abcd.coffee',
                         'src/codecs/abcf.coffee',
                         'src/codecs/abca.coffee',
                         'src/replay_parser.coffee'
@@ -43,8 +43,8 @@ module.exports = function (grunt) {
                         'src/models.coffee',
                         'src/reader.coffee',
                         'src/codecs/core.coffee',
-                        'src/codecs/abcd.coffee',
                         'src/codecs/abce.coffee',
+                        'src/codecs/abcd.coffee',
                         'src/codecs/abcf.coffee',
                         'src/codecs/abca.coffee',
                         'src/replay_parser.coffee'
