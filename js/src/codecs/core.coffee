@@ -5,6 +5,7 @@ class ReplayDataCoreCodec
   reader: null
   header: null
   footer: null
+  nodes: null
   constructor:(reader=null, header=null, footer=null)->
     ReplayDataReader.checkReaderType(reader, 'constructor')
     @reader = reader
@@ -48,16 +49,180 @@ class ReplayDataCoreCodec
   ###
 
   ###
+  readCount: ()->
+    return @reader.readInt32()
+
+  ###
+
+  ###
+  readSize: ()->
+    return @readCount() - @reader.getPosition()
+
+  ###
+
+  ###
   readValueNode: (typeCode)->
-    throw new NotImplementedException(ReplayDataCoreCodec.name + '.readValueNode()')
-    return
+    switch typeCode
+      when ReplayTypeCodes.BOOL
+        result = @reader.readUint8()
+        switch result
+          when ReplayTypeCodes.BOOL_TRUE
+            return true
+          when ReplayTypeCodes.BOOL_FALSE
+            return false
+          when 0x00
+            return false
+          when 0x01
+            return true
+          else
+            throw new NotSupportedNodeTypeException('0x'+result.toString(16))
+      when ReplayTypeCodes.INT8
+        return @reader.readInt8()
+      when ReplayTypeCodes.INT16
+        return @reader.readInt16()
+      when ReplayTypeCodes.INT32
+        return @reader.readInt32()
+      when ReplayTypeCodes.INT64
+      # FIXME: Int64はJavaScriptでは実装されていない
+        @reader.setPosition(@reader.getPosition()+8)
+        _w('Int64はJavaScriptでは実装されていない')
+        return null
+      when ReplayTypeCodes.UINT8
+        return @reader.readUint8()
+      when ReplayTypeCodes.UINT16
+        return @reader.readUint16()
+      when ReplayTypeCodes.UINT32
+        return @reader.readUint32()
+      when ReplayTypeCodes.UINT64
+      # FIXME: UInt64はJavaScriptでは実装されていない
+        @reader.setPosition(@reader.getPosition()+8)
+        _w('UInt64はJavaScriptでは実装されていない')
+        return null
+      when ReplayTypeCodes.FLOAT32
+        return @reader.readFloat32()
+      when ReplayTypeCodes.FLOAT64
+        return @reader.readFloat64()
+      when ReplayTypeCodes.COORDINATES2D
+        return [@reader.readFloat32(), @reader.readFloat32()]
+      when ReplayTypeCodes.COORDINATES3D
+        return [@reader.readFloat32(), @reader.readFloat32(), @reader.readFloat32()]
+      when ReplayTypeCodes.UTF16
+        return @reader.readCaUnicode()
+      when ReplayTypeCodes.ASCII
+        return @reader.readCaAscii()
+      when ReplayTypeCodes.ANGLE
+        return @reader.readUint16()
+      when ReplayTypeCodes.INVALID
+        return null
+      else
+        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
 
   ###
 
   ###
   readArrayNode: (typeCode)->
-    throw new NotImplementedException(ReplayDataCoreCodec.name + '.readArrayNode()')
-    return
+    arrayNodeEndOffset = @readCount()
+    results = []
+    switch typeCode
+      when ReplayTypeCodes.BOOL_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          result = @reader.readUint8()
+          switch result
+            when ReplayTypeCodes.BOOL_TRUE
+              results.push(true)
+            when ReplayTypeCodes.BOOL_FALSE
+              results.push(false)
+            when 0x00
+              results.push(false)
+            when 0x01
+              results.push(true)
+            else
+              throw new NotSupportedNodeTypeException('0x'+result.toString(16))
+        return results
+      when ReplayTypeCodes.INT8_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readInt8())
+        return results
+      when ReplayTypeCodes.INT16_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readInt16())
+        return results
+      when ReplayTypeCodes.INT32_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readInt32())
+        return results
+      when ReplayTypeCodes.INT64_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          # FIXME: Int64はJavaScriptでは実装されていない
+          @reader.setPosition(@reader.getPosition()+8)
+          _w('Int64はJavaScriptでは実装されていない')
+          results.push(null)
+        return results
+      when ReplayTypeCodes.UINT8_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readUint8())
+        return results
+      when ReplayTypeCodes.UINT16_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readUint16())
+        return results
+      when ReplayTypeCodes.UINT32_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readUint32())
+        return results
+      when ReplayTypeCodes.UINT64_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          # FIXME: UInt64はJavaScriptでは実装されていない
+          @reader.setPosition(@reader.getPosition()+8)
+          _w('UInt64はJavaScriptでは実装されていない')
+          results.push(null)
+        return results
+      when ReplayTypeCodes.FLOAT32_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readFloat32())
+        return results
+      when ReplayTypeCodes.FLOAT64_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readFloat64())
+        return results
+      when ReplayTypeCodes.COORDINATES2D_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push([@reader.readFloat32(),@reader.readFloat32()])
+        return results
+      when ReplayTypeCodes.COORDINATES3D_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push([@reader.readFloat32(), @reader.readFloat32(), @reader.readFloat32()])
+        return results
+      when ReplayTypeCodes.UTF16_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readCaUnicode())
+        return results
+      when ReplayTypeCodes.ASCII_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readCaAscii())
+        return results
+      when ReplayTypeCodes.ANGLE_ARRAY
+        while true
+          if @reader.getPosition() >= arrayNodeEndOffset then break
+          results.push(@reader.readUint16())
+        return results
+      else
+        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
 
   ###
 
@@ -69,15 +234,14 @@ class ReplayDataCoreCodec
     # uint8 version - version number - starts with 0, updated every time object format changes
     version = @reader.readUint8()
     # uint32 offset of first byte after end of record
-    nodeEndOffset = @reader.readUint32()
+    targetOffset = @readSize() + @reader.getPosition()
     values = {}
-    i=0
+    i = 0
     # noinspection CoffeeScriptInfiniteLoop
-    while true
-      if @reader.getPosition() >= nodeEndOffset then break
+    while @reader.getPosition() < targetOffset
       code = @reader.readUint8()
       result = @decodeNode(code)
-      if isObject(result)
+      if !isArray(result) and isObject(result)
         keys = Object.getOwnPropertyNames(result)
         for key in keys
           values[key] = result[key]
@@ -86,6 +250,7 @@ class ReplayDataCoreCodec
         i++
     obj = {}
     obj[tagName] = values
+    #_g(['--RECORD_NODE--',obj, '-- TAG_NAME_INDEX --','0x'+tagNameIndex.toString(16),'-- TAG_NAME --',tagName], _l)
     return obj
 
   ###
@@ -100,11 +265,10 @@ class ReplayDataCoreCodec
     # uint32 offset of first byte after end of array
     nodeEndOffset = @reader.readUint32()
     # uint32 number of elements
-    elementLength = @reader.readUint32()
+    elementLength = @readCount()
     values = []
     # noinspection CoffeeScriptInfiniteLoop
-    while true
-      if @reader.getPosition() >= nodeEndOffset then break
+    for i in range(elementLength)
       elementEndOffset = @reader.readUint32()
       # noinspection CoffeeScriptInfiniteLoop
       while true
@@ -124,16 +288,16 @@ class ReplayDataCoreCodec
     #recordBit = typeCode & ReplayTypeCodes.RECORD
     if typeCode < ReplayTypeCodes.BOOL_ARRAY
       v = @readValueNode(typeCode)
-      _g(['--VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      #_g(['--VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
     else if typeCode < ReplayTypeCodes.RECORD
       v = @readArrayNode(typeCode)
-      _g(['--ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      #_g(['--ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
     else if typeCode == ReplayTypeCodes.RECORD
       v = @readRecordNode()
-      _g(['--RECORD_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+      #_g(['--RECORD_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
     else if typeCode == ReplayTypeCodes.RECORD_ARRAY
       v = @readRecordArrayNode()
-      _g(['--RECORD_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+      #_g(['--RECORD_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
     else
       throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
     return v
@@ -150,14 +314,13 @@ class ReplayDataCoreCodec
   ###
   getNodes: ()->
     @reader.setPosition(@header.nodesStartOffset)
-    nodes = []
+    @nodes = []
     #noinspection CoffeeScriptInfiniteLoop
-    while true
-      if @reader.getPosition() >= (@header.footerStartOffset-1) then break
+    while @reader.getPosition() < (@header.footerStartOffset)
       code = @reader.readUint8()
       result = @decodeNode(code)
-      nodes.push(result)
-    return nodes
+      @nodes.push(result)
+    return @nodes
 
   ###
 

@@ -2,8 +2,8 @@
 
 ###
 class ReplayDataAbcfCodec extends ReplayDataCoreCodec
-  constructor:(reader, header)->
-    super(reader, header)
+  constructor:(reader=null, header=null, footer=null)->
+    super(reader, header, footer)
   readFooter: ()->
     @reader.setPosition(@header.footerStartOffset)
     # uint16 number of tag types
@@ -43,6 +43,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
       when ReplayTypeCodes.INT64
       # FIXME: Int64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
+        _w('Int64はJavaScriptでは実装されていない')
         return null
       when ReplayTypeCodes.UINT8
         return @reader.readUint8()
@@ -53,6 +54,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
       when ReplayTypeCodes.UINT64
       # FIXME: UInt64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
+        _w('UInt64はJavaScriptでは実装されていない')
         return null
       when ReplayTypeCodes.FLOAT32
         return @reader.readFloat32()
@@ -75,7 +77,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
   readArrayNode: (typeCode)->
-    arrayNodeEndOffset = @reader.readUint32()
+    arrayNodeEndOffset = @readCount()
     results = []
     switch typeCode
       when ReplayTypeCodes.BOOL_ARRAY
@@ -114,6 +116,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
           if @reader.getPosition() >= arrayNodeEndOffset then break
           # FIXME: Int64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
+          _w('Int64はJavaScriptでは実装されていない')
           results.push(null)
         return results
       when ReplayTypeCodes.UINT8_ARRAY
@@ -136,6 +139,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
           if @reader.getPosition() >= arrayNodeEndOffset then break
           # FIXME: UInt64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
+          _w('UInt64はJavaScriptでは実装されていない')
           results.push(null)
         return results
       when ReplayTypeCodes.FLOAT32_ARRAY
