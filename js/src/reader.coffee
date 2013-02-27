@@ -66,18 +66,17 @@ class ReplayDataReader
   readUintVar:()->
     code = @readUint8()
     result = 0
-    while(code & 0x80 != 0)
+    while (code & 0x80 != 0)
       result = (result << 7) + (code & 0x7f)
       code = @readUint8()
-    #return ~~((result << 7) + (code & 0x7f))
     return ((result << 7) + (code & 0x7f))
   # Int24分のデータを読み込み数値を返す関数。24bit分読み進めます。
   readInt24:()->
-    value = @readInt8()
+    value = @readUint8()
     sign = (value & 0x80) != 0
     value = value & 0x7f
     for i in range(2)
-      value = (value << 8) + @readInt8()
+      value = (value << 8) + @readUint8()
     if(sign)
       value = -value
     return value
@@ -85,7 +84,7 @@ class ReplayDataReader
   readUint24:()->
     value = 0
     for i in range(2)
-      value = (value << 8) + @readInt8()
+      value = (value << 8) + @readUint8()
     return value
 
   #
