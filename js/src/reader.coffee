@@ -66,7 +66,7 @@ class ReplayDataReader
   readUintVar:()->
     code = @readUint8()
     result = 0
-    while (code & 0x80 != 0)
+    while ((code & 0x80) != 0)
       result = (result << 7) + (code & 0x7f)
       code = @readUint8()
     return ((result << 7) + (code & 0x7f))
@@ -86,7 +86,6 @@ class ReplayDataReader
     for i in range(2)
       value = (value << 8) + @readUint8()
     return value
-
   #
   @checkReaderType: (reader, methodName='This method')->
     if DEBUG == false then return
