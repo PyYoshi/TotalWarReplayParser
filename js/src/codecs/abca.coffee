@@ -1,79 +1,17 @@
 ###
 
 ###
-class ReplayDataAbcaCodec extends ReplayDataCoreCodec
-  constructor:(reader, header)->
-    super(reader, header)
-  readFooter: ()->
-    @reader.setPosition(@header.footerStartOffset)
-    # uint16 number of tag types
-    tagsLength = @reader.readUint16()
-    tags = []
-    for i in range(tagsLength)
-      tags.push(@reader.readCaAscii())
-    exTagsLength = @reader.readUint16()
-    skipBlock = @reader.readUint16()
-    exTags = {}
-    for i in range(exTagsLength)
-      value = @reader.readCaUnicode()
-      index = @reader.readUint32()
-      exTags[index] = value
-    return new ReplayDataFooter(tags, exTags)
-  readValueNode: (typeCode)->
-    switch typeCode
-      when ReplayTypeCodes.BOOL
-        result = @reader.readUint8()
-        switch result
-          when ReplayTypeCodes.BOOL_TRUE
-            return true
-          when ReplayTypeCodes.BOOL_FALSE
-            return false
-          when 0x00
-            return false
-          when 0x01
-            return true
-          else
-            throw new NotSupportedNodeTypeException('0x'+result.toString(16))
-      when ReplayTypeCodes.INT8
-        return @reader.readInt8()
-      when ReplayTypeCodes.INT16
-        return @reader.readInt16()
-      when ReplayTypeCodes.INT32
-        return @reader.readInt32()
-      when ReplayTypeCodes.INT64
-      # FIXME: Int64はJavaScriptでは実装されていない
-        @reader.setPosition(@reader.getPosition()+8)
-        return null
-      when ReplayTypeCodes.UINT8
-        return @reader.readUint8()
-      when ReplayTypeCodes.UINT16
-        return @reader.readUint16()
-      when ReplayTypeCodes.UINT32
-        return @reader.readUint32()
-      when ReplayTypeCodes.UINT64
-      # FIXME: UInt64はJavaScriptでは実装されていない
-        @reader.setPosition(@reader.getPosition()+8)
-        return null
-      when ReplayTypeCodes.FLOAT32
-        return @reader.readFloat32()
-      when ReplayTypeCodes.FLOAT64
-        return @reader.readFloat64()
-      when ReplayTypeCodes.COORDINATES2D
-        return [@reader.readFloat32(), @reader.readFloat32()]
-      when ReplayTypeCodes.COORDINATES3D
-        return [@reader.readFloat32(), @reader.readFloat32(), @reader.readFloat32()]
-      when ReplayTypeCodes.UTF16
-        valueIndex = @reader.readUint32()
-        return @footer.getExTagName(valueIndex)
-      when ReplayTypeCodes.ASCII
-        valueIndex = @reader.readUint32()
-        return @footer.getExTagName(valueIndex)
-      when ReplayTypeCodes.ANGLE
-        return @reader.readUint16()
-      when ReplayTypeCodes.INVALID
-        return null
-      else
-        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
+class ReplayDataAbcaCodec extends ReplayDataAbcfCodec
+  BLOCK_BIT: 0x40
+  LONG_INFO: 0x20
+  RECORD_BIT: 0x80
+  OTHER_RECORD_BIT: 0xa0
+  constructor:(reader=null, header=null, footer=null)->
+    super(reader, header, footer)
+  readSize: ()->
+    return @reader.readUintVar()
+  readCount: ()->
+    return @readSize()
   readOptimizedValueNode: (typeCode)->
     switch typeCode
       when ReplayTypeCodes.BOOL_TRUE
@@ -102,9 +40,8 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
         return 0.0
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
-
   readArrayNode: (typeCode)->
-    arrayNodeEndOffset = @reader.readUintVar()
+    arrayNodeEndOffset = @readSize() + @reader.getPosition()
     results = []
     switch typeCode
       when ReplayTypeCodes.BOOL_ARRAY
@@ -143,7 +80,8 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
           if @reader.getPosition() >= arrayNodeEndOffset then break
           # FIXME: Int64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
-          results.push(null)
+          _w('Int64はJavaScriptでは実装されていない')
+          results.push(0)
         return results
       when ReplayTypeCodes.UINT8_ARRAY
         while true
@@ -165,7 +103,8 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
           if @reader.getPosition() >= arrayNodeEndOffset then break
           # FIXME: UInt64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
-          results.push(null)
+          _w('UInt64はJavaScriptでは実装されていない')
+          results.push(0)
         return results
       when ReplayTypeCodes.FLOAT32_ARRAY
         while true
@@ -207,6 +146,7 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
   readOptimizedArrayNode: (typeCode)->
+    arrayNodeEndOffset = @readCount()
     results = []
     switch typeCode
       when ReplayTypeCodes.INT32_BYTE_ARRAY
@@ -241,29 +181,22 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
         return results
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
-  readRecordNode: ()->
-    first = @reader.getPosition()-1 == @header.nodesStartOffset
-    if first
+  readRecordNode: (code)->
+    if (@reader.getPosition() == @header.nodesStartOffset+1) || ((code & @LONG_INFO) != 0)
       tagNameIndex = @reader.readUint16()
-    else
-      tagNameIndex = @reader.readUint8()
-    tagName = @footer.getTagName(tagNameIndex)
-    _g(['--TAG_INDEX--',tagNameIndex,'--TAG_NAME--',tagName,'--Position--','0x'+@reader.getPosition().toString(16)])
-    # uint8 version - version number - starts with 0, updated every time object format changes
-    if first
       version = @reader.readUint8()
     else
-      version = (ReplayTypeCodes.RECORD & 31) >> 1
-    # uintvar size of data within record in bytes
-    nodeEndOffset = @reader.readUintVar()
+      version = (code & 31 >> 1)
+      tagNameIndex = (code & 1) << 8
+      tagNameIndex += @reader.readUint8()
+    tagName = @footer.getTagName(tagNameIndex)
+    targetOffset = @readSize() + @reader.getPosition()
     values = {}
-    i=0
-    # noinspection CoffeeScriptInfiniteLoop
-    while true
-      if @reader.getPosition() >= nodeEndOffset then break
-      code = @reader.readUint8()
-      result = @decodeNode(code)
-      if isObject(result)
+    i = 0
+    while @reader.getPosition() < targetOffset
+      typeCode = @reader.readUint8()
+      result = @decodeNode(typeCode)
+      if !isArray(result) and isObject(result)
         keys = Object.getOwnPropertyNames(result)
         for key in keys
           values[key] = result[key]
@@ -273,60 +206,58 @@ class ReplayDataAbcaCodec extends ReplayDataCoreCodec
     obj = {}
     obj[tagName] = values
     return obj
-  readRecordArrayNode: ()->
-    # uint16 tag name - it's index to table of tags in the footer
-    tagNameIndex = @reader.readUint16()
+  readRecordArrayNode: (code)->
+    if (@reader.getPosition() == @header.nodesStartOffset+1) || ((code & @LONG_INFO) != 0)
+      tagNameIndex = @reader.readUint16()
+      version = @reader.readUint8()
+    else
+      version = (code & 31 >> 1)
+      tagNameIndex = (code & 1) << 8
+      tagNameIndex += @reader.readUint8()
     tagName = @footer.getTagName(tagNameIndex)
-    # uint8 version - version number
-    version = @reader.readUint8()
-    # uint32 offset of first byte after end of array
-    nodeEndOffset = @reader.readUintVar()
-    # uint32 number of elements
-    elementLength = @reader.readUintVar()
+    size = @readSize()
+    itemCount = @readCount()
     values = []
-    # noinspection CoffeeScriptInfiniteLoop
-    while true
-      if @reader.getPosition() >= nodeEndOffset then break
-      elementEndOffset = @reader.readUintVar()
-      # noinspection CoffeeScriptInfiniteLoop
-      while true
-        if @reader.getPosition() >= elementEndOffset then break
+    for i in range(itemCount)
+      targetOffset = @readSize() + @reader.getPosition()
+      while @reader.getPosition() < targetOffset
         code = @reader.readUint8()
         values.push(@decodeNode(code))
     obj = {}
     obj[tagName] = values
     return obj
-
-  ###
-
-  ###
   decodeNode: (typeCode)->
-    ReplayDataReader.checkReaderType(@reader, 'decodeNode()')
-    if isNumber(typeCode) == false then throw new TypeError('This typeCode is not Number')
-    recordBit = typeCode & ReplayTypeCodes.RECORD
-    #if recordBit == 0 || @reader.getPosition()-1 == @header.nodesStartOffset
-
-    if typeCode < ReplayTypeCodes.BOOL_TRUE
-      v = @readValueNode(typeCode)
-      _g(['--VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
-    else if typeCode < ReplayTypeCodes.BOOL_ARRAY
-      v = @readOptimizedValueNode(typeCode)
-      _g(['--OPTIMIZED_VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
-    else if typeCode < ReplayTypeCodes.BOOL_TRUE_ARRAY
-      v = @readArrayNode(typeCode)
-      _g(['--ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
-    else if typeCode < ReplayTypeCodes.RECORD
-      v = @readOptimizedArrayNode(typeCode)
-      _g(['--OPTIMIZED_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
-    else if typeCode == ReplayTypeCodes.RECORD
-      v = @readRecordNode()
-      _g(['--RECORD_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
-    else if typeCode == ReplayTypeCodes.RECORD_ARRAY
-      v = @readRecordArrayNode()
-      _g(['--RECORD_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+    recordBit = (typeCode & @RECORD_BIT)
+    if recordBit == 0 || @reader.getPosition() == @header.nodesStartOffset
+      if typeCode < ReplayTypeCodes.BOOL_TRUE
+        # Value Node
+        result = @readValueNode(typeCode)
+        #_g(['--VALUE_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      else if typeCode < ReplayTypeCodes.BOOL_ARRAY
+        # Optimized Value Node
+        result = @readOptimizedValueNode(typeCode)
+        #_g(['--OPTIMIZED_VALUE_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      else if typeCode < ReplayTypeCodes.BOOL_TRUE_ARRAY
+        # Array Node
+        # TODO: ABCAでのreadArrayNodeの処理がおかしい
+        result = @readArrayNode(typeCode)
+        #_g(['--ARRAY_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      else if typeCode < ReplayTypeCodes.RECORD
+        # Optimized Array Node
+        result = @readOptimizedArrayNode(typeCode)
+        #_g(['--OPTIMIZED_ARRAY_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
+      else if typeCode == ReplayTypeCodes.RECORD or typeCode == @OTHER_RECORD_BIT
+        result = @readRecordNode(typeCode)
+        #_g(['--RECORD_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+      else if typeCode == ReplayTypeCodes.RECORD_ARRAY
+        result = @readRecordArrayNode(typeCode)
+        #_g(['--RECORD_ARRAY_NODE--',result,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
+      else
+        throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
     else
-      throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
-    return v
+      blockBit = (typeCode & @BLOCK_BIT) != 0
+      if blockBit then result = @readRecordArrayNode(typeCode) else result = @readRecordNode(typeCode)
+    return result
   parseGameTitle: (gameTitle)->
     result = gameTitle.match(/^([a-z|A-Z|\d]*)\:TotalWar\(([0-9|\.]*)\)\(.*Build\(([0-9]*)\).*\)\sChangelist\(([0-9]*)\)$/)
     return new ReplayDataGameTitle(result[1], result[2], Number(result[3]), Number(result[4]))
