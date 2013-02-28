@@ -6,7 +6,6 @@ class ReplayDataAbceCodec extends ReplayDataCoreCodec
     super(reader, header, footer)
   readFooter: ()->
     @reader.setPosition(@header.footerStartOffset)
-    # uint16 number of tag types
     tagsLength = @reader.readUint16()
     tags = []
     for i in range(tagsLength)

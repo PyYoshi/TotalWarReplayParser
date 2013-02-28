@@ -6,7 +6,6 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
     super(reader, header, footer)
   readFooter: ()->
     @reader.setPosition(@header.footerStartOffset)
-    # uint16 number of tag types
     tagsLength = @reader.readUint16()
     tags = []
     for i in range(tagsLength)
@@ -44,7 +43,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
       # FIXME: Int64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
         _w('Int64はJavaScriptでは実装されていない')
-        return null
+        return 0
       when ReplayTypeCodes.UINT8
         return @reader.readUint8()
       when ReplayTypeCodes.UINT16
@@ -55,7 +54,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
       # FIXME: UInt64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
         _w('UInt64はJavaScriptでは実装されていない')
-        return null
+        return 0
       when ReplayTypeCodes.FLOAT32
         return @reader.readFloat32()
       when ReplayTypeCodes.FLOAT64
@@ -117,7 +116,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
           # FIXME: Int64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
           _w('Int64はJavaScriptでは実装されていない')
-          results.push(null)
+          results.push(0)
         return results
       when ReplayTypeCodes.UINT8_ARRAY
         while true
@@ -140,7 +139,7 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
           # FIXME: UInt64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
           _w('UInt64はJavaScriptでは実装されていない')
-          results.push(null)
+          results.push(0)
         return results
       when ReplayTypeCodes.FLOAT32_ARRAY
         while true

@@ -19,7 +19,6 @@ class ReplayDataCoreCodec
       @footer = footer
     else
       @footer = @readFooter()
-
   ###
     ReplayFileのヘッダーを取得する関数。
     @return {ReplayDataHeader}
@@ -27,37 +26,29 @@ class ReplayDataCoreCodec
   @readHeader: (reader=null)->
     ReplayDataReader.checkReaderType(reader)
     if reader.getPosition() != 0 then reader.setPosition(0)
-    # uint32 format number
     format = reader.readUint32()
     if format not in [ReplayDataFormats.ABCE, ReplayDataFormats.ABCF, ReplayDataFormats.ABCA] then throw new NotSupportedFileException()
-    # uint32 4bytes, always zero
     skipBlock = reader.readUint32()
-    # unit32 4bytes, look like Unix timestamp
     timestamp = new Date()
     timestamp.setTime(reader.readUint32()*1000)
-    # uint32 offset where footer starts
     footerStartOffset = reader.readUint32()
     return new ReplayDataHeader(format, timestamp, reader.getPosition(), footerStartOffset)
-
   ###
 
   ###
   readFooter: ()->
     throw new NotImplementedException(ReplayDataCoreCodec.name + '.readFooter()')
     return
-
   ###
 
   ###
   readCount: ()->
-    return @reader.readInt32()
-
+    return @reader.readUint32()
   ###
 
   ###
   readSize: ()->
     return @readCount() - @reader.getPosition()
-
   ###
 
   ###
@@ -86,7 +77,7 @@ class ReplayDataCoreCodec
       # FIXME: Int64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
         _w('Int64はJavaScriptでは実装されていない')
-        return null
+        return 0
       when ReplayTypeCodes.UINT8
         return @reader.readUint8()
       when ReplayTypeCodes.UINT16
@@ -97,7 +88,7 @@ class ReplayDataCoreCodec
       # FIXME: UInt64はJavaScriptでは実装されていない
         @reader.setPosition(@reader.getPosition()+8)
         _w('UInt64はJavaScriptでは実装されていない')
-        return null
+        return 0
       when ReplayTypeCodes.FLOAT32
         return @reader.readFloat32()
       when ReplayTypeCodes.FLOAT64
@@ -116,7 +107,6 @@ class ReplayDataCoreCodec
         return null
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
-
   ###
 
   ###
@@ -161,7 +151,7 @@ class ReplayDataCoreCodec
           # FIXME: Int64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
           _w('Int64はJavaScriptでは実装されていない')
-          results.push(null)
+          results.push(0)
         return results
       when ReplayTypeCodes.UINT8_ARRAY
         while true
@@ -184,7 +174,7 @@ class ReplayDataCoreCodec
           # FIXME: UInt64はJavaScriptでは実装されていない
           @reader.setPosition(@reader.getPosition()+8)
           _w('UInt64はJavaScriptでは実装されていない')
-          results.push(null)
+          results.push(0)
         return results
       when ReplayTypeCodes.FLOAT32_ARRAY
         while true
@@ -223,17 +213,13 @@ class ReplayDataCoreCodec
         return results
       else
         throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
-
   ###
 
   ###
-  readRecordNode: ()->
-    # uint16 tag name - it's index to table of tags in the footer. index
+  readRecordNode: (typeCode)->
     tagNameIndex = @reader.readUint16()
     tagName = @footer.getTagName(tagNameIndex)
-    # uint8 version - version number - starts with 0, updated every time object format changes
     version = @reader.readUint8()
-    # uint32 offset of first byte after end of record
     targetOffset = @readSize() + @reader.getPosition()
     values = {}
     i = 0
@@ -250,21 +236,16 @@ class ReplayDataCoreCodec
         i++
     obj = {}
     obj[tagName] = values
-    #_g(['--RECORD_NODE--',obj, '-- TAG_NAME_INDEX --','0x'+tagNameIndex.toString(16),'-- TAG_NAME --',tagName], _l)
     return obj
 
   ###
 
   ###
-  readRecordArrayNode: ()->
-    # uint16 tag name - it's index to table of tags in the footer
+  readRecordArrayNode: (typeCode)->
     tagNameIndex = @reader.readUint16()
     tagName = @footer.getTagName(tagNameIndex)
-    # uint8 version - version number
     version = @reader.readUint8()
-    # uint32 offset of first byte after end of array
-    nodeEndOffset = @reader.readUint32()
-    # uint32 number of elements
+    nodeEndOffset = @readSize()
     elementLength = @readCount()
     values = []
     # noinspection CoffeeScriptInfiniteLoop
@@ -285,7 +266,6 @@ class ReplayDataCoreCodec
   decodeNode: (typeCode)->
     ReplayDataReader.checkReaderType(@reader, 'decodeNode()')
     if isNumber(typeCode) == false then throw new TypeError('This typeCode is not Number')
-    #recordBit = typeCode & ReplayTypeCodes.RECORD
     if typeCode < ReplayTypeCodes.BOOL_ARRAY
       v = @readValueNode(typeCode)
       #_g(['--VALUE_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
@@ -293,22 +273,20 @@ class ReplayDataCoreCodec
       v = @readArrayNode(typeCode)
       #_g(['--ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)],_l)
     else if typeCode == ReplayTypeCodes.RECORD
-      v = @readRecordNode()
+      v = @readRecordNode(typeCode)
       #_g(['--RECORD_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
     else if typeCode == ReplayTypeCodes.RECORD_ARRAY
-      v = @readRecordArrayNode()
+      v = @readRecordArrayNode(typeCode)
       #_g(['--RECORD_ARRAY_NODE--',v,'--Position--','0x'+@reader.getPosition().toString(16)], _l)
     else
       throw new NotSupportedNodeTypeException('0x'+typeCode.toString(16))
     return v
-
   ###
 
   ###
   parseGameTitle: (gameTitle)->
     throw new NotImplementedException(ReplayDataCoreCodec.name + '.parseGameTitle()')
     return
-
   ###
 
   ###
@@ -321,7 +299,6 @@ class ReplayDataCoreCodec
       result = @decodeNode(code)
       @nodes.push(result)
     return @nodes
-
   ###
 
   ###
