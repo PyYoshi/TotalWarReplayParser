@@ -105,11 +105,9 @@ isElement = (obj)->
 ###
 range = (start=null, end=null)->
   if start == null then throw new TypeError('range() takes 1 or 2 arguments')
-  result = []
   if isNumber(start) && end == null
-    for i in [0...start]
-      result.push(i)
-  else if isNumber(start) && end != null
-    for i in [start...end]
-      result.push(i)
-  return result
+    return [0...start]
+  else if isNumber(start) && end != null && isNumber(end)
+    return [start...end]
+  else
+    throw new TypeError('range() integer end argument expected')
