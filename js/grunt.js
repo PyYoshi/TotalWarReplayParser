@@ -79,7 +79,7 @@ module.exports = function (grunt) {
                 dest: 'dist/ReplayParser.min.js'
             },
             dataStream:{
-                src: ['dist/DataStream.js'],
+                src: ['DataStream.js'],
                 dest:'dist/DataStream.min.js'
             }
         },
