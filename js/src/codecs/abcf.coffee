@@ -186,7 +186,6 @@ class ReplayDataAbcfCodec extends ReplayDataCoreCodec
   parse: ()->
     root = @nodes[0]['root']
     battle_replay = root['BATTLE_REPLAY']
-    #_l(battle_replay)
     battle_setup = battle_replay['BATTLE_SETUP']
     battle_setup_info = battle_setup['BATTLE_SETUP_INFO']
     empire_replay = battle_replay['EMPIRE_REPLAY']

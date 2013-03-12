@@ -18,14 +18,12 @@ class ReplayDataAbceCodec extends ReplayDataCoreCodec
   parse: ()->
     root = @nodes[0]['root']
     battle_replay = root['BATTLE_REPLAY']
-    _l(battle_replay)
     battle_setup = battle_replay['BATTLE_SETUP']
     battle_setup_info = battle_setup['BATTLE_SETUP_INFO']
 
     empire_replay = battle_replay['EMPIRE_REPLAY']
     game = @parseGameTitle(empire_replay[0])
     tmp_map = battle_setup_info[0].split('/')
-    _l(tmp_map)
     map = tmp_map[tmp_map.length - 2]
     battle_results = battle_replay['BATTLE_RESULTS']
     alliances = battle_results['ALLIANCES']
