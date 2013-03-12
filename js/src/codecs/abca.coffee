@@ -259,7 +259,5 @@ class ReplayDataAbcaCodec extends ReplayDataAbcfCodec
       if blockBit then result = @readRecordArrayNode(typeCode) else result = @readRecordNode(typeCode)
     return result
   parseGameTitle: (gameTitle)->
-    result = gameTitle.match(/^([a-z|A-Z|\d]*)\:TotalWar\(([0-9|\.]*)\)\(.*Build\(([0-9]*)\).*\)\sChangelist\(([0-9]*)\)$/)
-    return new ReplayDataGameTitle(result[1], result[2], Number(result[3]), Number(result[4]))
-  parse: ()->
-    return
+    result = gameTitle.match(/^Total\sWar\:\s([a-z|A-Z|\d|\s]*)\s\(([a-z|A-Z|\d|\.]*)\)\(.*Build\(([0-9|\*]*)\).*Changelist\(([0-9|\*]*)\)$/)
+    return new ReplayDataGameTitle(result[1].replace(' ', ''), result[2], result[3], Number(result[4]))
