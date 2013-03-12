@@ -1,9 +1,7 @@
 class ReplayData
   codec: null
   header: null
-  footer: null
-  nodes: null
-
+  @parsed_data = null
   constructor:(stream)->
     reader = new ReplayDataReader(stream)
     @header = ReplayDataCoreCodec.readHeader(reader)
@@ -16,6 +14,8 @@ class ReplayData
         @codec = new ReplayDataAbcaCodec(reader, @header)
       else
         throw new NotSupportedFileException()
-    _l(@codec)
-    _l(@codec.getNodes())
+    @codec.getNodes()
+    #_g(['---------------- CODEC ----------------', @codec])
+    @parsed_data = @codec.parse()
+    #_g(['---- PARSED DATA ----', parsed_data])
 
