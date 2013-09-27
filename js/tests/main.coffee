@@ -11,6 +11,8 @@ $ ->
     fr.onload = (ev)->
       stream = ev.target.result
       replayData = new ReplayData(stream)
+      _l(replayData)
+      return
 
     fr.readAsArrayBuffer(file)
     return
