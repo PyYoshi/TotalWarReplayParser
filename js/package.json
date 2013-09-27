@@ -1,20 +1,22 @@
 {
-    "author": "PyYoshi (https://github.com/PyYoshi)",
-    "name": "TotalWarReplayParser",
-    "version": "0.1.0",
-    "repository": {
-        "type": "git",
-        "url": "git@github.com:PyYoshi/TotalWarReplayParser.git"
-    },
-    "bugs": {
-        "url": "https://github.com/PyYoshi/TotalWarReplayParser/issues"
-    },
-    "dependencies": {
-        "grunt-contrib": "0.2.0"
-    },
-    "devDependencies": {},
-    "optionalDependencies": {},
-    "engines": {
-        "node": ">=0.8.0"
-    }
+  "author": "PyYoshi (https://github.com/PyYoshi)",
+  "name": "TotalWarReplayParser",
+  "version": "0.1.0",
+  "repository": {
+    "type": "git",
+    "url": "git@github.com:PyYoshi/TotalWarReplayParser.git"
+  },
+  "bugs": {
+    "url": "https://github.com/PyYoshi/TotalWarReplayParser/issues"
+  },
+  "optionalDependencies": {},
+  "engines": {
+    "node": ">=0.10.17"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.1",
+    "grunt-contrib-coffee": "~0.7.0",
+    "grunt-contrib-watch": "~0.5.3",
+    "grunt-contrib-uglify": "~0.2.4"
+  }
 }
